@@ -6,6 +6,7 @@
 library(tidyverse)
 library(data.table)
 library(timeDate)
+library(lubridate)
 
 # Connect and Import TMDM --------------------------------------------------
 con <- DBI::dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "IPTC-TMDATAMART\\TMDATAMART",
@@ -173,7 +174,7 @@ rm(list = paste0("PASSENGER_COUNT_query_",seq_along(1:5)))
 rm(list = paste0("PASSENGER_COUNT_raw"))
 
 
-# connect and read raw--------------------------------------------------------------
+# Connect and Read VMH--------------------------------------------------------------
 con2 <- DBI::dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "REPSQLP01VW", 
                       Database = "TransitAuthority_IndyGo_Reporting", 
                       Port = 1433)
@@ -200,13 +201,17 @@ VMH_Query <- tbl(con2,sql("select a.Time
                           and a.Time < DATEADD(day,1,'20200601')
                           "
                           )#endsql
-)#end tbl
+              )#end tbl
 
-x <- VMH_Query %>% collect()
+VMH_Raw <- VMH_Query %>% collect() %>% setDT()
 
+VMH_Raw[, c("ClockTime","Date") := list(str_sub(Time, 12, 19),str_sub(Time, 1, 10))
+             ][, DateTest := ifelse(ClockTime<"03:00:00",1,0)
+               ][, Transit_Day := ifelse(DateTest ==1
+                                         ,as_date(Date)-1
+                                         ,as_date(Date))
+                 ][,Transit_Day := as_date("1970-01-01")+days(Transit_Day)
+                   ]
 
-setDT(x)
-a <- Sys.time()
-x[,.N,format(Time,"%Y/%m/%d")] %>% view()
-b <- Sys.time()-a
-b
+fwrite(VMH_Raw,"data//raw//VMH_Raw.csv")
+rm(VMH_Raw)
