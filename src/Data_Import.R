@@ -49,16 +49,29 @@ ROUTE_DIRECTION <- tbl(con, "ROUTE_DIRECTION") %>%
   collect() %>%
   setDT()
 
-# pass count, paired against schedule 
+# pass count, for a few different time frames, this takes like twenty minutes
 
-PASSENGER_COUNT_query_thru_20120101 <- PASSENGER_COUNT_query <- tbl(con, sql("SELECT CALENDAR_ID, ROUTE_ID, GEO_NODE_ID, 
-                                      BOARD, ALIGHT, VEHICLE_ID, TRIP_ID, PATTERN_ID,
-                                      RUN_ID, BLOCK_ID, WORK_PIECE_ID
+PASSENGER_COUNT_query_1 <- tbl(con, sql("SELECT
+                                      CALENDAR_ID
+                                      ,ROUTE_ID
+                                      ,GEO_NODE_ID
+                                      ,BOARD
+                                      ,ALIGHT
+                                      ,VEHICLE_ID
+                                      ,TRIP_ID
+                                      ,PATTERN_ID
+                                      ,RUN_ID
+                                      ,BLOCK_ID
+                                      ,WORK_PIECE_ID
                                       from PASSENGER_COUNT
-                                      WHERE (CALENDAR_ID >= 1120091124.0) and (CALENDAR_ID <= 120120101.0)
+                                      WHERE CALENDAR_ID > 120091124.0
+                                      and CALENDAR_ID < 120120101.0
+                                      and (BOARD > 0.0 OR ALIGHT > 0.0)
+                                      and REVENUE_ID = 'R'
                                       and PASSENGER_COUNT.TRIP_ID IS NOT NULL
                                       and PASSENGER_COUNT.VEHICLE_ID IN (SELECT dbo.SCHEDULE.VEHICLE_ID
-                                      FROM dbo.SCHEDULE with (nolock) WHERE PASSENGER_COUNT.CALENDAR_ID = dbo.SCHEDULE.CALENDAR_ID
+                                      FROM dbo.SCHEDULE with (nolock)
+                                      WHERE PASSENGER_COUNT.CALENDAR_ID = dbo.SCHEDULE.CALENDAR_ID
                                       AND PASSENGER_COUNT.TIME_TABLE_VERSION_ID=dbo.SCHEDULE.TIME_TABLE_VERSION_ID
                                       AND PASSENGER_COUNT.ROUTE_ID = dbo.SCHEDULE.ROUTE_ID
                                       AND PASSENGER_COUNT.ROUTE_DIRECTION_ID = dbo.SCHEDULE.ROUTE_DIRECTION_ID
@@ -66,15 +79,27 @@ PASSENGER_COUNT_query_thru_20120101 <- PASSENGER_COUNT_query <- tbl(con, sql("SE
                                       AND PASSENGER_COUNT.GEO_NODE_ID = dbo.SCHEDULE.GEO_NODE_ID)
                                       "))
 
-
-PASSENGER_COUNT_query <- tbl(con, sql("SELECT CALENDAR_ID, ROUTE_ID, GEO_NODE_ID, 
-                                      BOARD, ALIGHT, VEHICLE_ID, TRIP_ID, PATTERN_ID,
-                                      RUN_ID, BLOCK_ID, WORK_PIECE_ID
+PASSENGER_COUNT_query_2 <- tbl(con, sql("SELECT
+                                      CALENDAR_ID
+                                      ,ROUTE_ID
+                                      ,GEO_NODE_ID
+                                      ,BOARD
+                                      ,ALIGHT
+                                      ,VEHICLE_ID
+                                      ,TRIP_ID
+                                      ,PATTERN_ID
+                                      ,RUN_ID
+                                      ,BLOCK_ID
+                                      ,WORK_PIECE_ID
                                       from PASSENGER_COUNT
-                                      WHERE (CALENDAR_ID > 120120101.0) and (CALENDAR_ID <= 120170131.0)
+                                      WHERE CALENDAR_ID >= 120120101.0
+                                      and CALENDAR_ID < 120150101.0
+                                      and (BOARD > 0.0 OR ALIGHT > 0.0)
+                                      and REVENUE_ID = 'R'
                                       and PASSENGER_COUNT.TRIP_ID IS NOT NULL
                                       and PASSENGER_COUNT.VEHICLE_ID IN (SELECT dbo.SCHEDULE.VEHICLE_ID
-                                      FROM dbo.SCHEDULE with (nolock) WHERE PASSENGER_COUNT.CALENDAR_ID = dbo.SCHEDULE.CALENDAR_ID
+                                      FROM dbo.SCHEDULE with (nolock)
+                                      WHERE PASSENGER_COUNT.CALENDAR_ID = dbo.SCHEDULE.CALENDAR_ID
                                       AND PASSENGER_COUNT.TIME_TABLE_VERSION_ID=dbo.SCHEDULE.TIME_TABLE_VERSION_ID
                                       AND PASSENGER_COUNT.ROUTE_ID = dbo.SCHEDULE.ROUTE_ID
                                       AND PASSENGER_COUNT.ROUTE_DIRECTION_ID = dbo.SCHEDULE.ROUTE_DIRECTION_ID
@@ -82,15 +107,98 @@ PASSENGER_COUNT_query <- tbl(con, sql("SELECT CALENDAR_ID, ROUTE_ID, GEO_NODE_ID
                                       AND PASSENGER_COUNT.GEO_NODE_ID = dbo.SCHEDULE.GEO_NODE_ID)
                                       "))
 
+PASSENGER_COUNT_query_3 <- tbl(con, sql("SELECT
+                                      CALENDAR_ID
+                                      ,ROUTE_ID
+                                      ,GEO_NODE_ID
+                                      ,BOARD
+                                      ,ALIGHT
+                                      ,VEHICLE_ID
+                                      ,TRIP_ID
+                                      ,PATTERN_ID
+                                      ,RUN_ID
+                                      ,BLOCK_ID
+                                      ,WORK_PIECE_ID
+                                      from PASSENGER_COUNT
+                                      WHERE CALENDAR_ID > 120150101.0
+                                      and CALENDAR_ID <= 120170101.0
+                                      and (BOARD > 0.0 OR ALIGHT > 0.0)
+                                      and REVENUE_ID = 'R'
+                                      and PASSENGER_COUNT.TRIP_ID IS NOT NULL
+                                      and PASSENGER_COUNT.VEHICLE_ID IN (SELECT dbo.SCHEDULE.VEHICLE_ID
+                                      FROM dbo.SCHEDULE with (nolock)
+                                      WHERE PASSENGER_COUNT.CALENDAR_ID = dbo.SCHEDULE.CALENDAR_ID
+                                      AND PASSENGER_COUNT.TIME_TABLE_VERSION_ID=dbo.SCHEDULE.TIME_TABLE_VERSION_ID
+                                      AND PASSENGER_COUNT.ROUTE_ID = dbo.SCHEDULE.ROUTE_ID
+                                      AND PASSENGER_COUNT.ROUTE_DIRECTION_ID = dbo.SCHEDULE.ROUTE_DIRECTION_ID
+                                      AND PASSENGER_COUNT.TRIP_ID = dbo.SCHEDULE.TRIP_ID
+                                      AND PASSENGER_COUNT.GEO_NODE_ID = dbo.SCHEDULE.GEO_NODE_ID)
+                                      "))
 
-PASSENGER_COUNT_thru_20120101 <- PASSENGER_COUNT_query %>% collect() %>% setDT()
+PASSENGER_COUNT_query_4 <- tbl(con, sql("SELECT
+                                      CALENDAR_ID
+                                      ,ROUTE_ID
+                                      ,GEO_NODE_ID
+                                      ,BOARD
+                                      ,ALIGHT
+                                      ,VEHICLE_ID
+                                      ,TRIP_ID
+                                      ,PATTERN_ID
+                                      ,RUN_ID
+                                      ,BLOCK_ID
+                                      ,WORK_PIECE_ID
+                                      from PASSENGER_COUNT
+                                      WHERE CALENDAR_ID > 120170101.0
+                                      and CALENDAR_ID <= 120190101.0
+                                      and (BOARD > 0.0 OR ALIGHT > 0.0)
+                                      and REVENUE_ID = 'R'
+                                      and PASSENGER_COUNT.TRIP_ID IS NOT NULL
+                                      and PASSENGER_COUNT.VEHICLE_ID IN (SELECT dbo.SCHEDULE.VEHICLE_ID
+                                      FROM dbo.SCHEDULE with (nolock)
+                                      WHERE PASSENGER_COUNT.CALENDAR_ID = dbo.SCHEDULE.CALENDAR_ID
+                                      AND PASSENGER_COUNT.TIME_TABLE_VERSION_ID=dbo.SCHEDULE.TIME_TABLE_VERSION_ID
+                                      AND PASSENGER_COUNT.ROUTE_ID = dbo.SCHEDULE.ROUTE_ID
+                                      AND PASSENGER_COUNT.ROUTE_DIRECTION_ID = dbo.SCHEDULE.ROUTE_DIRECTION_ID
+                                      AND PASSENGER_COUNT.TRIP_ID = dbo.SCHEDULE.TRIP_ID
+                                      AND PASSENGER_COUNT.GEO_NODE_ID = dbo.SCHEDULE.GEO_NODE_ID)
+                                      "))
 
-PASSENGER_COUNT_raw[,.N,CALENDAR_ID
-                    ][order(CALENDAR_ID)] %>% view()
+PASSENGER_COUNT_query_5 <- tbl(con, sql("SELECT
+                                      CALENDAR_ID
+                                      ,ROUTE_ID
+                                      ,GEO_NODE_ID
+                                      ,BOARD
+                                      ,ALIGHT
+                                      ,VEHICLE_ID
+                                      ,TRIP_ID
+                                      ,PATTERN_ID
+                                      ,RUN_ID
+                                      ,BLOCK_ID
+                                      ,WORK_PIECE_ID
+                                      from PASSENGER_COUNT
+                                      WHERE CALENDAR_ID > 120190101.0
+                                      and CALENDAR_ID <= 120200603.0
+                                      and (BOARD > 0.0 OR ALIGHT > 0.0)
+                                      and REVENUE_ID = 'R'
+                                      and PASSENGER_COUNT.TRIP_ID IS NOT NULL
+                                      and PASSENGER_COUNT.VEHICLE_ID IN (SELECT dbo.SCHEDULE.VEHICLE_ID
+                                      FROM dbo.SCHEDULE with (nolock)
+                                      WHERE PASSENGER_COUNT.CALENDAR_ID = dbo.SCHEDULE.CALENDAR_ID
+                                      AND PASSENGER_COUNT.TIME_TABLE_VERSION_ID=dbo.SCHEDULE.TIME_TABLE_VERSION_ID
+                                      AND PASSENGER_COUNT.ROUTE_ID = dbo.SCHEDULE.ROUTE_ID
+                                      AND PASSENGER_COUNT.ROUTE_DIRECTION_ID = dbo.SCHEDULE.ROUTE_DIRECTION_ID
+                                      AND PASSENGER_COUNT.TRIP_ID = dbo.SCHEDULE.TRIP_ID
+                                      AND PASSENGER_COUNT.GEO_NODE_ID = dbo.SCHEDULE.GEO_NODE_ID)
+                                      "))
+
+PASSENGER_COUNT_1 <- PASSENGER_COUNT_query_1 %>% collect() %>% setDT()
+PASSENGER_COUNT_2 <- PASSENGER_COUNT_query_2 %>% collect() %>% setDT()
+PASSENGER_COUNT_3 <- PASSENGER_COUNT_query_3 %>% collect() %>% setDT()
+PASSENGER_COUNT_4 <- PASSENGER_COUNT_query_4 %>% collect() %>% setDT()
+PASSENGER_COUNT_5 <- PASSENGER_COUNT_query_5 %>% collect() %>% setDT()
 
 
-st <- as.Date("2009-11-24")
-en <- as.Date("2012-01-01")
-length(seq.Date(st,en,"day"))
-PASSENGER_COUNT_raw[,n_distinct(CALENDAR_ID)]
+
+
+PASSENGER_COUNT_raw <-rbind(PASSENGER_COUNT_1,PASSENGER_COUNT_2,PASSENGER_COUNT_3,PASSENGER_COUNT_4,PASSENGER_COUNT_5)
 
