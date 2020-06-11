@@ -1,12 +1,13 @@
 #'mike nugent, jr.
 #'data analyst
 #'indygo
-#'run this one first
+#'run this one first to import the data
 
 library(tidyverse)
 library(data.table)
+library(timeDate)
 
-# Connect and Import VMH --------------------------------------------------
+# Connect and Import TMDM --------------------------------------------------
 con <- DBI::dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "IPTC-TMDATAMART\\TMDATAMART",
                       Database = "TMDATAMART", 
                       Port = 1433)
@@ -162,11 +163,50 @@ PASSENGER_COUNT_5 <- PASSENGER_COUNT_query_5 %>% collect() %>% setDT()
 #rbind it so we have one big happy data frame
 PASSENGER_COUNT_raw <-rbind(PASSENGER_COUNT_1,PASSENGER_COUNT_2,PASSENGER_COUNT_3,PASSENGER_COUNT_4,PASSENGER_COUNT_5)
 
-# Write the data ----------------------------------------------------------
+# Write TMDM ----------------------------------------------------------
 fwrite(PASSENGER_COUNT_raw,"data//raw//Passenger_Count_Raw.csv")
 
 
-# Clean up ----------------------------------------------------------------
+# Clean TMDM ----------------------------------------------------------------
 rm(list = paste0("PASSENGER_COUNT_",seq_along(1:5)))
 rm(list = paste0("PASSENGER_COUNT_query_",seq_along(1:5)))
 rm(list = paste0("PASSENGER_COUNT_raw"))
+
+
+# connect and read raw--------------------------------------------------------------
+con2 <- DBI::dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "REPSQLP01VW", 
+                      Database = "TransitAuthority_IndyGo_Reporting", 
+                      Port = 1433)
+
+
+VMH_Query <- tbl(con2,sql("select a.Time
+                          ,a.Route
+                          ,Boards
+                          ,Alights
+                          ,Trip
+                          ,Vehicle_ID
+                          ,Stop_Name
+                          ,Stop_Id
+                          ,Inbound_Outbound
+                          ,Departure_Time
+                          ,Latitude
+                          ,Longitude
+                          ,GPSStatus
+                          from avl.Vehicle_Message_History a (nolock)
+                          left join avl.Vehicle_Avl_History b
+                          on a.Avl_History_Id = b.Avl_History_Id
+                          where (Boards > 0 or Alights > 0)
+                          and a.Time > '20180101'
+                          and a.Time < DATEADD(day,1,'20200601')
+                          "
+                          )#endsql
+)#end tbl
+
+x <- VMH_Query %>% collect()
+
+
+setDT(x)
+a <- Sys.time()
+x[,.N,format(Time,"%Y/%m/%d")] %>% view()
+b <- Sys.time()-a
+b
