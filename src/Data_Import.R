@@ -19,7 +19,7 @@ con <- DBI::dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "IPTC-TMDATA
                       Database = "TMDATAMART", 
                       Port = 1433)
 
-# pass count, for a few different time frames, this takes like twenty minutes
+# import pass count, for a few different time frames, this takes like twenty minutes
 
 PASSENGER_COUNT_query_1 <- tbl(con, sql("SELECT
                                       CALENDAR_ID
