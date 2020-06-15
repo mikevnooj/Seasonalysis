@@ -1,3 +1,20 @@
+#'mike nugent, jr.
+#'data analyst
+#'indygo
+
+
+# description -------------------------------------------------------------
+
+# this script relies on Passenger_Count_Raw.csv and VMH_Raw.csv in ~data//raw//
+# it outputs 4 files to ~data//processed//:
+# pass_count_joined.csv
+# pass_count_daily.csv
+# VMH_count_daily.csv
+# pass_count_all_joined.csv
+
+
+# libraries ---------------------------------------------------------------
+
 library(data.table)
 library(tidyverse)
 
@@ -83,7 +100,9 @@ VMH_count_daily[pass_count_daily, on = .(ds,Route)][order(ds)]
 
 pass_count_daily[VMH_count_daily, on = .(ds,Route)][order(ds)]
 
-pass_count_joined <- merge.data.table(pass_count_daily,VMH_count_daily,by = c("ds","Route"),all = TRUE)
+pass_count_all_joined <- merge.data.table(pass_count_daily,VMH_count_daily,by = c("ds","Route"),all = TRUE)
 
-
-
+fwrite(pass_count_raw, "data//processed//pass_count_joined.csv")
+fwrite(pass_count_daily, "data//processed//pass_count_daily.csv")
+fwrite(VMH_count_daily, "data//processed//VMH_count_daily.csv")
+fwrite(pass_count_all_joined,"data//processed//pass_count_all_joined.csv")

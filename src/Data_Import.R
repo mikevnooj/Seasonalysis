@@ -1,8 +1,14 @@
 #'mike nugent, jr.
 #'data analyst
 #'indygo
-#'run this one first to import the data
 
+
+# description -------------------------------------------------------------
+#'run this one first to import the data
+#'outputs passenger_count_raw.csv and VMH_raw.csv to data//raw//
+
+
+# libraries ---------------------------------------------------------------
 library(tidyverse)
 library(data.table)
 library(timeDate)
