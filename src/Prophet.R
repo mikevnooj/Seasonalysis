@@ -68,7 +68,7 @@ m <- prophet(
   ,weekly.seasonality = FALSE
   ,yearly.seasonality = FALSE
   ,holidays = holidays
-  ,holidays.prior.scale = 10
+  ,holidays.prior.scale = .03
   ,growth = 'linear'
   )
 
@@ -80,21 +80,21 @@ m <- add_seasonality(
   ,fourier.order = 20
 )
 
-#add quarterly
-m <- add_seasonality(
-  m
-  ,name = 'quarterly'
-  ,period = 365.25/4
-  ,fourier.order = 5
-)
-
-#add monthly
-m <- add_seasonality(
-  m
-  ,name = 'monthly'
-  ,period = 30.5
-  ,fourier.order = 3
-)
+# #add quarterly
+# m <- add_seasonality(
+#   m
+#   ,name = 'quarterly'
+#   ,period = 365.25/4
+#   ,fourier.order = 5
+# )
+# 
+# #add monthly
+# m <- add_seasonality(
+#   m
+#   ,name = 'monthly'
+#   ,period = 30.5
+#   ,fourier.order = 3
+# )
 
 #add weekly
 m <- add_seasonality(
@@ -116,6 +116,5 @@ dyplot.prophet(m,forecast)
 
 m.cv <- cross_validation(m,365.25,units = "days")
 
-plot_cross_validation_metric(m.cv, "mae")
 
-
+mape(m$history$y,forecast$yhat[which(forecast$ds <= max(m$history$ds))])

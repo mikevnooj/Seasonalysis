@@ -17,6 +17,7 @@
 
 library(data.table)
 library(tidyverse)
+library(anytime)
 
 # read in TMDM ------------------------------------------------------------
 
@@ -80,17 +81,31 @@ pass_count_raw[CALENDAR_raw
 
 pass_count_daily <- pass_count_raw[,.(Boardings = sum(BOARD)
                                        ,Alightings = sum(ALIGHT))
-                                    ,.(ds = CALENDAR_DATE,
+                                    ,.(ds = as.IDate(CALENDAR_DATE),
                                        Route = Route_name)] #so named for prophet
 pass_count_daily[,y:=Boardings] #also for prophet
+
 
 
 # read in VMH -------------------------------------------------------------
 VMH_Raw <- fread("data//raw//VMH_Raw.csv",data.table = TRUE)
 
+
+# clean VMH ---------------------------------------------------------------
+#fix time and date formats
+VMH_Raw[,Time := fasttime::fastPOSIXct(Time,tz = "UTC")
+        ][,Transit_Day := as.IDate(Transit_Day)]
+
+routes_to_remove <- c(65535,999,0,1826,32855,4864,32771,12432)
+
+VMH_Raw <- VMH_Raw[!Route %in% routes_to_remove
+                   ][!VMH_Vehicles_to_rm,on = c("Vehicle_ID","Transit_Day")]
+
+nrow(VMH_Raw)
+
 VMH_count_daily <- VMH_Raw[,.(Boardings = sum(Boards)
                               ,Alightings = sum(Alights))
-                           ,.(ds = ymd(Transit_Day,tz = "UTC")
+                           ,.(ds = Transit_Day
                               ,Route = as.character(Route))]
 
 
@@ -102,7 +117,91 @@ pass_count_daily[VMH_count_daily, on = .(ds,Route)][order(ds)]
 
 pass_count_all_joined <- merge.data.table(pass_count_daily,VMH_count_daily,by = c("ds","Route"),all = TRUE)
 
+merge.data.table(pass_count_daily,VMH_count_daily,by = c("ds","Route"))
+
+
+
 fwrite(pass_count_raw, "data//processed//pass_count_joined.csv")
 fwrite(pass_count_daily, "data//processed//pass_count_daily.csv")
 fwrite(VMH_count_daily, "data//processed//VMH_count_daily.csv")
 fwrite(pass_count_all_joined,"data//processed//pass_count_all_joined.csv")
+
+
+
+
+
+
+# this section is for exploring which data need cleaned and/or removed --------
+# start with VMH
+
+
+
+VMH_Raw[between(Transit_Day,as.IDate("2019-09-12"),as.IDate("2020-03-01")),sum(Boards),.(Vehicle_ID, Transit_Day)
+        ][order(-V1),
+          ggplot(
+            .SD
+            ,aes(Transit_Day,V1,color = as.factor(ifelse(Vehicle_ID %in% c("1988","1986","1993","1994"),Vehicle_ID,0)))
+            )+
+            geom_point()+
+            ylim(500,5000)+
+            labs(color = "")+
+            theme(axis.text.x = element_text(angle = 90))]
+
+# so there's a lot of super high bangers here, not so good
+# we need to clean routes first i think
+
+routes_to_remove <- c(65535,999,0,1826,32855,4864,32771,12432)
+
+VMH_Raw <- VMH_Raw[!Route %in% routes_to_remove]
+
+# alright, now let's look at our vehicles
+VMH_Raw[
+  #Transit_Day > "2019-09-22" 
+  #& Transit_Day < "2020-02-24",
+  ,.(Boards, Vehicle_ID, Time)
+  ][order(-Boards),head(.SD,10000)
+    ][order(-Boards),ggplot(
+      .SD,
+      aes(Time,Boards,color = as.factor(ifelse(Vehicle_ID %in% c("1988","1986","1993","1994"),"problem","ok")))
+      )+
+        geom_violin()+
+        labs(color = "")
+      ]
+
+# better, let's get our top offenders and remove them
+VMH_Vehicles_to_rm <- VMH_Raw[,sum(Boards),.(Vehicle_ID,Transit_Day)
+                              ][order(-V1),head(.SD,59)][,.(Vehicle_ID,Transit_Day)]
+
+# annnnnd plot
+VMH_Raw[!VMH_Vehicles_to_rm,on = c("Vehicle_ID","Transit_Day")
+        ][order(-Boards),head(.SD,10000)
+          ][order(-Boards),ggplot(
+            .SD,
+            aes(Time,Boards,color = as.factor(ifelse(Vehicle_ID %in% c("1988","1986","1993","1994"),"problem","ok")))
+            )+
+              geom_point()+
+              labs(color = "")
+          ]
+
+# looks much better
+
+VMH_Raw[!VMH_Vehicles_to_rm,on = c("Vehicle_ID","Transit_Day")]
+
+
+
+VMH_count_daily <- VMH_Raw[,.(Boardings = sum(Boards)
+                              ,Alightings = sum(Alights))
+                           ,.(ds = Transit_Day
+                              ,Route = as.character(Route))]
+
+pass_count_raw[,unique(Route_name)]
+
+pass_count_raw[,sum(BOARD),.(PROPERTY_TAG,CALENDAR_DATE)
+               ][order(-V1),ggplot(
+                 .SD
+                 ,aes(CALENDAR_DATE, V1)
+                 )+
+                 geom_point()+
+                   ylim(700,3000)]
+
+
