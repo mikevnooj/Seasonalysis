@@ -17,7 +17,6 @@
 
 library(data.table)
 library(tidyverse)
-library(anytime)
 
 # read in TMDM ------------------------------------------------------------
 
@@ -134,8 +133,6 @@ fwrite(pass_count_all_joined,"data//processed//pass_count_all_joined.csv")
 # this section is for exploring which data need cleaned and/or removed --------
 # pass_count
 
-pass_count_raw[,unique(Route_name)]
-
 pass_count_raw[,sum(BOARD),.(PROPERTY_TAG,CALENDAR_DATE)
                ][order(-V1),ggplot(
                  .SD
@@ -143,5 +140,26 @@ pass_count_raw[,sum(BOARD),.(PROPERTY_TAG,CALENDAR_DATE)
                  )+
                  geom_point()+
                    ylim(700,3000)]
+
+# let's check routes
+pass_count_raw[,unique(Route_name)]
+
+route_names_to_rm <- c("26SN","1826","90")
+
+# okay so there's a bunch of outliers
+pass_count_raw[,sum(BOARD),.(PROPERTY_TAG, CALENDAR_DATE)
+               ][order(-V1),head(.SD,80)]
+
+pass_count_raw[!Route_name %in% route_names_to_rm,.(BOARD, PROPERTY_TAG, CALENDAR_DATE)
+               ][between(CALENDAR_DATE,as.POSIXct("2015-01-01"),as.POSIXct("2019-01-01"))
+                 ][order(-BOARD),head(.SD,10000)
+                   ][order(-BOARD),ggplot(
+                     .SD
+                     ,aes(CALENDAR_DATE,BOARD)
+                     )+
+                       geom_point()+
+                       ylim(0,425)+
+                       theme(axis.text.x = element_text(angle = 90))
+                     ]
 
 
