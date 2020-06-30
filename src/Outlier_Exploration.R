@@ -174,16 +174,10 @@ pass_count_raw[between(CALENDAR_DATE,as.POSIXct("2016-01-01"),as.POSIXct("2018-0
                    labs(shape = "")
                  ]
 
-pass_count_raw[PROPERTY_TAG == 1712
-               ,ggplot(
-                 .SD
-                 ,aes(PROPERTY_TAG,BOARD)
-               )+
-                 geom_violin()]
 
 
 #lets look at boards below 80
-pass_count_raw[between(BOARD,10,80)& 
+pass_count_raw[between(BOARD,7,80)& 
                  PROPERTY_TAG != "1712"
                #][order(-BOARD),head(.SD,10000)
                ]%>%ggplot(aes(x=BOARD))+
@@ -191,12 +185,12 @@ pass_count_raw[between(BOARD,10,80)&
 
 
 pass_count_raw[PROPERTY_TAG!=1712,.N,BOARD
-               ][order(BOARD),
+               ][BOARD > 40,
                  ggplot(
                    .SD,
                    aes(x=BOARD,y=N)
                  )+geom_col()
-                 +xlim(50,500)
+                 #+xlim(0,500)
                  ]
 
 pass_count_raw[PROPERTY_TAG != 1712 & 
@@ -212,6 +206,7 @@ pass_count_raw[PROPERTY_TAG != 1712 &
 pass_count_raw[PROPERTY_TAG != 1712 & 
                  BOARD <= 40,sum(BOARD),CALENDAR_DATE
                ]
+
 pass_count_raw[PROPERTY_TAG != 1712 & 
                  BOARD <= 80,sum(BOARD),CALENDAR_DATE
                ]
@@ -221,7 +216,7 @@ var(pass_count_raw$BOARD)
 mean(pass_count_raw$BOARD)
 
 
-
+names(pass_count_raw)
 
 
 1.1/159*100
@@ -229,5 +224,23 @@ mean(pass_count_raw$BOARD)
 p <- pass_count_raw[between(BOARD,10,100)& 
                       PROPERTY_TAG != "1712"
                     ] %>%
-  ggplot(aes(x=CALENDAR_DATE,y=BOARD))
+  ggplot(aes(x=PROPERTY_TAG,y=BOARD))
+
+#to make pass count a ts object we first must find out if there are any gaps in the date data
+daily_sum <- pass_count_raw[,.(boardings = sum(BOARD)),.(date = as.Date(CALENDAR_DATE))
+                            ][order(date)]
+
+weekly_average <- daily_sum[,mean(boardings),year()]
+
+
+
+start_date <- as.Date(pass_count_raw[,min(CALENDAR_DATE)])
+end_date  <- as.Date(pass_count_raw[,max(CALENDAR_DATE)])
+
+to_convert <- merge(daily_sum,data.table(date=seq(start_date,end_date,"days")),all = TRUE)
+daily_ts <- ts(to_convert[,boardings],frequency = 365,start = c(year(start_date), as.numeric(format(start_date, "%j"))))
+
+
+plot(daily_ts)
+
 
