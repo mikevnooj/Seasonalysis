@@ -227,20 +227,31 @@ p <- pass_count_raw[between(BOARD,10,100)&
   ggplot(aes(x=PROPERTY_TAG,y=BOARD))
 
 #to make pass count a ts object we first must find out if there are any gaps in the date data
-daily_sum <- pass_count_raw[,.(boardings = sum(BOARD)),.(date = as.Date(CALENDAR_DATE))
+daily_sum_one <- pass_count_raw[VEHICLE_ID != 1712 &
+                              between(BOARD,0,50),.(boardings = sum(BOARD)),.(date = as.Date(CALENDAR_DATE))
                             ][order(date)]
 
-weekly_average <- daily_sum[,mean(boardings),year()]
+daily_sum_two <- pass_count_raw[,.(boardings = sum(BOARD)),.(date = as.Date(CALENDAR_DATE))
+                                ][order(date)]
 
-
+weekly_average_one <- daily_sum[,.(boardings = mean(boardings)),.(year(date),isoweek(date))][order(year,isoweek)]
+weekly_average_two <- daily_sum_two[,.(boardings = mean(boardings)),.(year(date),isoweek(date))][order(year,isoweek)]
 
 start_date <- as.Date(pass_count_raw[,min(CALENDAR_DATE)])
 end_date  <- as.Date(pass_count_raw[,max(CALENDAR_DATE)])
 
-to_convert <- merge(daily_sum,data.table(date=seq(start_date,end_date,"days")),all = TRUE)
-daily_ts <- ts(to_convert[,boardings],frequency = 365,start = c(year(start_date), as.numeric(format(start_date, "%j"))))
+to_convert_one <- merge(daily_sum_one,data.table(date=seq(start_date,end_date,"days")),all = TRUE)
+to_convert_two <- merge(daily_sum_two,data.table(date=seq(start_date,end_date,"days")),all=TRUE)
+
+daily_ts_one <- ts(to_convert_one[,boardings],frequency = 365,start = c(year(start_date), as.numeric(format(start_date, "%j"))))
+daily_ts_one <- ts(to_convert_two[,boardings],frequency = 365,start = c(year(start_date), as.numeric(format(start_date, "%j"))))
+
+weekly_ts_one <- ts(weekly_average_one$boardings,frequency = 52,start = c(as.numeric(year(start_date)),as.numeric(isoweek(start_date))))
+weekly_ts_two <- ts(weekly_average_two$boardings,frequency = 52,start = c(as.numeric(year(start_date)),as.numeric(isoweek(start_date))))
 
 
-plot(daily_ts)
+plot(weekly_ts_one)
+plot(weekly_ts_two)
+ggAcf(weekly_ts)
 
 
