@@ -1,8 +1,10 @@
 # this script is for exploring which data need cleaned and/or removed --------
 # pass_count
+options(scipen = 999)
 library(data.table)
 library(tidyverse)
 library(DBI)
+library(leaflet)
 
 # start here for pass_count_explo -----------------------------------------
 #lets pull in from the sandbox
@@ -219,8 +221,7 @@ mean(pass_count_raw$BOARD)
 names(pass_count_raw)
 
 
-1.1/159*100
-1.4/267*100
+
 p <- pass_count_raw[between(BOARD,10,100)& 
                       PROPERTY_TAG != "1712"
                     ] %>%
@@ -228,13 +229,13 @@ p <- pass_count_raw[between(BOARD,10,100)&
 
 #to make pass count a ts object we first must find out if there are any gaps in the date data
 daily_sum_one <- pass_count_raw[VEHICLE_ID != 1712 &
-                              between(BOARD,0,50),.(boardings = sum(BOARD)),.(date = as.Date(CALENDAR_DATE))
+                              between(BOARD,0,15),.(boardings = sum(BOARD)),.(date = as.Date(CALENDAR_DATE))
                             ][order(date)]
 
 daily_sum_two <- pass_count_raw[,.(boardings = sum(BOARD)),.(date = as.Date(CALENDAR_DATE))
                                 ][order(date)]
 
-weekly_average_one <- daily_sum[,.(boardings = mean(boardings)),.(year(date),isoweek(date))][order(year,isoweek)]
+weekly_average_one <- daily_sum_one[,.(boardings = mean(boardings)),.(year(date),isoweek(date))][order(year,isoweek)]
 weekly_average_two <- daily_sum_two[,.(boardings = mean(boardings)),.(year(date),isoweek(date))][order(year,isoweek)]
 
 start_date <- as.Date(pass_count_raw[,min(CALENDAR_DATE)])
@@ -252,6 +253,59 @@ weekly_ts_two <- ts(weekly_average_two$boardings,frequency = 52,start = c(as.num
 
 plot(weekly_ts_one)
 plot(weekly_ts_two)
-ggAcf(weekly_ts)
 
 
+# by variable -------------------------------------------------------------
+
+# by stop
+# how many stops have strange boardings records
+pass_count_raw[BOARD > 0,n_distinct(Stop_number)]
+pass_count_raw[BOARD > 50,n_distinct(Stop_number)]
+pass_count_raw[BOARD > 100, n_distinct(Stop_number)]
+
+pass_count_raw[,sum(BOARD)]
+pass_count_raw[BOARD < 100,sum(BOARD)]
+
+
+#mean of daily or stop level boardings
+#identify vehicles above the mean
+
+#serial offenders
+pass_count_raw[,n_distinct(PROPERTY_TAG)]
+pass_count_raw[BOARD > 100,.N,.(Stop_number,CALENDAR_DATE)] %>%
+  ggplot(
+    aes(x = CALENDAR_DATE
+        ,y=N)
+  )+geom_point()
+
+#are there dates where the data is bad
+pass_count_raw[BOARD > 50 &
+                 PROPERTY_TAG != 1712,.N,.(PROPERTY_TAG,CALENDAR_DATE)
+               ][order(N)]
+
+pass_count_raw[,.(.N,sum = .N*BOARD),.(BOARD = as.numeric(BOARD))
+               ][,prop := round(sum/sum(sum),5)
+                 ][order(BOARD),cumprop := round(cumsum(prop),3)
+                   ][order(BOARD),Nprop := round(N/sum(N),5)
+                     ][order(BOARD),cumNprop := round(cumsum(Nprop),3)] %>%
+  ggplot()+
+  geom_line(aes(BOARD,cumprop),color = "red")+
+  geom_line(aes(BOARD,cumNprop),color = "blue")
+
+
+
+#okay let's use the *ahem* cudgel approach and cut off anything below of... less than 
+store <- GEO_NODE_raw[pass_count_raw[PROPERTY_TAG!=1712,sum(BOARD),.(Stop_number,CALENDAR_DATE)
+                            ][,mean(V1),Stop_number
+                              ][order(-V1)]
+             ,on = "Stop_number"
+             ][,`:=` (lat = Stop_lat/10000000
+                      ,lon = Stop_lon/10000000)]
+
+leaflet(data = store)%>%
+  addTiles() %>% addCircles(fillOpacity = ~V1,radius = 5,popup = Stop_)
+
+
+pass_count_raw[PROPERTY_TAG != 1712,sum(BOARD),Stop_number]
+
+pass_count_raw[,mean(BOARD),Stop_number][order(-V1)]
